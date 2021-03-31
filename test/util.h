@@ -1,11 +1,5 @@
 #pragma once
 
-#ifdef __STDC_NO_ATOMICS__
-#error "no atomic library is available"
-#else
-#include <stdatomic.h>
-#endif
-
 #ifdef __STDC_NO_THREADS__
 #include <pthread.h>
 typedef pthread_t thread_id;

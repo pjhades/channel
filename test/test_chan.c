@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <err.h>
-
+#include "atomic.h"
 #include "chan.h"
 #include "util.h"
 

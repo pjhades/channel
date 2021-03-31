@@ -1,7 +1,7 @@
 // Based on https://akkadia.org/drepper/futex.pdf
 
 #include <stdint.h>
-#include <stdatomic.h>
+#include "atomic.h"
 #include "futex.h"
 #include "mutex.h"
 
@@ -16,7 +16,7 @@ void mutex_init(struct mutex *mu) {
 }
 
 void mutex_unlock(struct mutex *mu) {
-    uint32_t orig = atomic_fetch_sub(&mu->val, 1);
+    uint32_t orig = atomic_fetch_sub_explicit(&mu->val, 1, memory_order_relaxed);
     if (orig != LOCKED_NO_WAITER) {
         mu->val = UNLOCKED;
         futex_wake(&mu->val, 1);
@@ -24,7 +24,10 @@ void mutex_unlock(struct mutex *mu) {
 }
 
 static uint32_t cas(uint32_t *ptr, uint32_t expect, uint32_t new) {
-    atomic_compare_exchange_strong(ptr, &expect, new);
+    atomic_compare_exchange_strong_explicit(
+        ptr, &expect, new,
+        memory_order_acq_rel,
+        memory_order_acquire);
     return expect;
 }
 
