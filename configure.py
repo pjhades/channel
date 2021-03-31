@@ -2,6 +2,7 @@
 
 import sys
 import ninja_syntax
+import subprocess
 
 def glibc_since(maj, min):
     import re, subprocess
@@ -9,13 +10,22 @@ def glibc_since(maj, min):
     m = re.search(r'ldd \(GNU libc\) (\d+).(\d+).*', s)
     return int(m[1]) >= maj and int(m[2]) >= min
 
+def cacheline_size():
+    size = 64
+    try:
+        size = int(subprocess.check_output(['getconf', 'LEVEL1_DCACHE_LINESIZE']))
+    except:
+        pass
+    return size
+
 if __name__ == '__main__':
     if not sys.platform.startswith('linux'):
         sys.exit("This software only supports Linux")
 
     w = ninja_syntax.Writer(open('build.ninja', 'w'))
 
-    cflags = ['-std=c11', '-c', '-g', '-Wall', '-Werror', '-Isrc']
+    cflags = ['-std=c11', '-c', '-g', '-Wall', '-Werror', '-Isrc',
+              f'-DCACHELINE_SIZE={cacheline_size()}']
     if glibc_since(2, 19):
         cflags.append('-D_DEFAULT_SOURCE')
     else:

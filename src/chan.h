@@ -10,15 +10,17 @@ struct chan_item {
 };
 
 struct chan {
-    bool closed;
-
-    // Unbuffered channels only: the pointer used for data exchange.
-    void **datap;
-
     // Unbuffered channels only: guarantees that at most
     // one writer and one reader have the right to access.
     struct mutex send_mtx;
+    uint8_t pad1[CACHELINE_SIZE - sizeof(struct mutex)];
     struct mutex recv_mtx;
+    uint8_t pad2[CACHELINE_SIZE - sizeof(struct mutex)];
+
+    uint64_t head;
+    uint8_t pad3[CACHELINE_SIZE - sizeof(uint64_t)];
+    uint64_t tail;
+    uint8_t pad4[CACHELINE_SIZE - sizeof(uint64_t)];
 
     // For unbuffered channels, these futexes start from 1 (CHAN_NOT_READY).
     // They are incremented to indicate that a thread is waiting.
@@ -33,10 +35,20 @@ struct chan {
     size_t send_waiters;
     size_t recv_waiters;
 
-    // Ring buffer
+    bool closed;
+
+    // Unbuffered channels only: the pointer used for data exchange.
+    void **datap;
+
+    // XXX problematic
+    uint8_t pad5[CACHELINE_SIZE - 2 * sizeof(uint32_t)
+                                - 2 * sizeof(size_t)
+                                - sizeof(bool)
+                                - sizeof(void **)];
+
     size_t cap;
-    uint64_t head;
-    uint64_t tail;
+    uint8_t pad6[CACHELINE_SIZE - sizeof(size_t)];
+
     struct chan_item ring[0];
 };
 

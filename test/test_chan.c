@@ -179,8 +179,8 @@ void bench_chan(const size_t repeat,
 }
 
 int main(int argc, char **argv) {
-    test_chan(1000, 0, 10000, 80, reader, 80, writer);
-    test_chan(1000, 7, 10000, 80, reader, 80, writer);
+    test_chan(100, 0, 10000, 20, reader, 20, writer);
+    //test_chan(1000, 7, 10000, 80, reader, 80, writer);
 
     //bench_chan(10000, 0, 100, 1, reader, 1, writer);
     //bench_chan(10000, 0, 100, 2, reader, 2, writer);
