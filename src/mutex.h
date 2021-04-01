@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 struct mutex {
-    uint32_t val;
+    _Atomic(uint32_t) val;
 };
 
 #define MUTEX_INITIALIZER (struct mutex){.val = 0}
