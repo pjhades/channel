@@ -3,7 +3,7 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
-#include <stdatomic.h>
+#include "atomic.h"
 #include "futex.h"
 #include "chan.h"
 

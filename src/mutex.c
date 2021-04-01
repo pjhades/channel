@@ -1,7 +1,7 @@
 // Based on https://akkadia.org/drepper/futex.pdf
 
 #include <stdint.h>
-#include <stdatomic.h>
+#include "atomic.h"
 #include "futex.h"
 #include "mutex.h"
 
@@ -23,7 +23,7 @@ void mutex_unlock(struct mutex *mu) {
     }
 }
 
-static uint32_t cas(_Atomic(uint32_t) *ptr, uint32_t expect, uint32_t new) {
+static uint32_t cas(_Atomic uint32_t *ptr, uint32_t expect, uint32_t new) {
     atomic_compare_exchange_strong_explicit(
         ptr, &expect, new,
         memory_order_acq_rel,

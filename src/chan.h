@@ -5,15 +5,15 @@
 #include "mutex.h"
 
 struct chan_item {
-    _Atomic(uint32_t) lap;
+    _Atomic uint32_t lap;
     void *data;
 };
 
 struct chan {
-    _Atomic(bool) closed;
+    _Atomic bool closed;
 
     // Unbuffered channels only: the pointer used for data exchange.
-    _Atomic(void **)datap;
+    _Atomic (void **)datap;
 
     // Unbuffered channels only: guarantees that at most
     // one writer and one reader have the right to access.
@@ -26,17 +26,17 @@ struct chan {
     //
     // For buffered channels, these futexes represent credits for
     // a reader or write to retry receiving or sending.
-    _Atomic(uint32_t) send_ftx;
-    _Atomic(uint32_t) recv_ftx;
+    _Atomic uint32_t send_ftx;
+    _Atomic uint32_t recv_ftx;
 
     // Buffered channels only: number of waiting threads on the futexes.
-    _Atomic(size_t) send_waiters;
-    _Atomic(size_t) recv_waiters;
+    _Atomic size_t send_waiters;
+    _Atomic size_t recv_waiters;
 
     // Ring buffer
     size_t cap;
-    _Atomic(uint64_t) head;
-    _Atomic(uint64_t) tail;
+    _Atomic uint64_t head;
+    _Atomic uint64_t tail;
     struct chan_item ring[0];
 };
 
