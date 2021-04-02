@@ -27,7 +27,7 @@ thread_id reader_tids[THREAD_MAX];
 thread_id writer_tids[THREAD_MAX];
 struct thread_arg reader_args[THREAD_MAX];
 struct thread_arg writer_args[THREAD_MAX];
-size_t msg_total, msg_count[MSG_MAX];
+_Atomic size_t msg_total, msg_count[MSG_MAX];
 
 def_thread_fn(writer) {
     struct thread_arg *a = arg;
