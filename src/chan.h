@@ -13,7 +13,7 @@ struct chan {
     _Atomic bool closed;
 
     // Unbuffered channels only: the pointer used for data exchange.
-    _Atomic (void **)datap;
+    _Atomic(void **) datap;
 
     // Unbuffered channels only: guarantees that at most
     // one writer and one reader have the right to access.

@@ -6,7 +6,7 @@ import ninja_syntax
 def glibc_since(maj, min):
     import re, subprocess
     s = subprocess.check_output('ldd --version', shell=True).decode()
-    m = re.search(r'ldd \(GNU libc\) (\d+).(\d+).*', s)
+    m = re.search(r'ldd \(.*\) (\d+).(\d+).*', s)
     return int(m[1]) >= maj and int(m[2]) >= min
 
 if __name__ == '__main__':

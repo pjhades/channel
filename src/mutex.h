@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "atomic.h"
 
 struct mutex {
     _Atomic uint32_t val;

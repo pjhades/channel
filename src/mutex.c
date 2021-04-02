@@ -1,7 +1,6 @@
 // Based on https://akkadia.org/drepper/futex.pdf
 
 #include <stdint.h>
-#include "atomic.h"
 #include "futex.h"
 #include "mutex.h"
 
