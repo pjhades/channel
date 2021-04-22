@@ -43,16 +43,21 @@ struct buf_chan {
     _Atomic uint64_t head;
     _Atomic uint64_t tail;
     size_t cap;
-    struct chan_item *ring;
+    struct chan_item ring[0];
 };
 
-typedef void *(*chan_alloc_fn)(size_t);
-typedef void (*chan_free_fn)(void *);
+typedef void *(*chan_allocator)(size_t);
 
-struct chan *chan_make(size_t cap, chan_alloc_fn alloc);
-struct chan chan_make_unbuf(void);
-void chan_close(struct chan *ch);
-int chan_send(struct chan *ch, void *data);
-int chan_recv(struct chan *ch, void **data);
-int chan_trysend(struct chan *ch, void *data);
-int chan_tryrecv(struct chan *ch, void **data);
+struct unbuf_chan unbuf_chan_make(void);
+int unbuf_chan_send(struct unbuf_chan *ch, void *data);
+int unbuf_chan_trysend(struct unbuf_chan *ch, void *data);
+int unbuf_chan_recv(struct unbuf_chan *ch, void **data);
+int unbuf_chan_tryrecv(struct unbuf_chan *ch, void **data);
+void unbuf_chan_close(struct unbuf_chan *ch);
+
+struct buf_chan *buf_chan_make(size_t cap, chan_allocator allocate);
+int buf_chan_trysend(struct buf_chan *ch, void *data);
+int buf_chan_send(struct buf_chan *ch, void *data);
+int buf_chan_tryrecv(struct buf_chan *ch, void **data);
+int buf_chan_recv(struct buf_chan *ch, void **data);
+void buf_chan_close(struct buf_chan *ch);

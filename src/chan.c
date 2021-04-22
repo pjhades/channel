@@ -13,42 +13,11 @@ enum {
     CHAN_CLOSED = 3,
 };
 
-static void chan_init(struct chan *ch, size_t cap) {
-    ch->closed = false;
-    ch->datap = NULL;
+struct buf_chan *buf_chan_make(size_t cap, chan_allocator allocate) {
+    struct chan *ch;
 
-    mutex_init(&ch->send_mtx);
-    mutex_init(&ch->recv_mtx);
-
-    if (cap == 0) {
-        ch->send_ftx = CHAN_NOT_READY;
-        ch->recv_ftx = CHAN_NOT_READY;
-    }
-    else {
-        ch->send_ftx = 0;
-        ch->recv_ftx = 0;
-    }
-    ch->send_waiters = 0;
-    ch->recv_waiters = 0;
-    ch->cap = cap;
-    ch->head = (uint64_t)1 << 32;
-    ch->tail = 0;
-    if (ch->cap > 0)
-        memset(ch->ring, 0, cap * sizeof(struct chan_item));
-}
-
-struct buf_chan *buf_chan_make(size_t cap,
-                               chan_alloc_fn allocfn,
-                               chan_free_fn freefn) {
-    struct chan *ch = NULL;
-    struct chan_item *ring = NULL;
-
-    if (!allocfn)
-        goto fail;
-    if (!(ch = allocfn(sizeof(*ch))))
-        goto fail;
-    if (!(ring = allocfn(cap * sizeof(struct chan_item))))
-        goto fail_ring;
+    if (!allocate || !(ch = allocate(sizeof(*ch) + cap * sizeof(struct chan_item))))
+        return NULL;
 
     ch->closed = false;
     ch->send_ftx = 0;
@@ -58,14 +27,8 @@ struct buf_chan *buf_chan_make(size_t cap,
     ch->cap = cap;
     ch->head = (uint64_t)1 << 32;
     ch->tail = 0;
-    ch->ring = ring;
     memset(ch->ring, 0, cap * sizeof(struct chan_item));
 
-    return ch;
-
-fail_ring:
-    freefn(ch);
-fail:
     return ch;
 }
 
