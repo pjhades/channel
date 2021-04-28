@@ -34,10 +34,11 @@ if __name__ == '__main__':
 
     w.build('src/mutex.o', 'cc', 'src/mutex.c')
     w.build('src/chan.o', 'cc', 'src/chan.c')
-    w.build('test/test_chan.o', 'cc', 'test/test_chan.c')
-    w.build('test/test_chan', 'link', ['test/test_chan.o', 'src/chan.o', 'src/mutex.o'])
+    w.build('test/util.o', 'cc', 'test/util.c')
+    w.build('test/unbuf.o', 'cc', 'test/unbuf.c')
+    w.build('test/unbuf', 'link', ['test/unbuf.o', 'test/util.o', 'src/chan.o', 'src/mutex.o'])
     w.newline()
 
-    w.default('test/test_chan')
+    w.default('test/unbuf')
 
     w.close()

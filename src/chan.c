@@ -14,7 +14,7 @@ enum {
 };
 
 struct buf_chan *buf_chan_make(size_t cap, chan_allocator allocate) {
-    struct chan *ch;
+    struct buf_chan *ch;
 
     if (!allocate || !(ch = allocate(sizeof(*ch) + cap * sizeof(struct chan_item))))
         return NULL;
@@ -33,12 +33,14 @@ struct buf_chan *buf_chan_make(size_t cap, chan_allocator allocate) {
 }
 
 struct unbuf_chan unbuf_chan_make(void) {
-    ch->closed = false;
-    ch->datap = NULL;
-    mutex_init(&ch->send_mtx);
-    mutex_init(&ch->recv_mtx);
-    ch->send_ftx = CHAN_NOT_READY;
-    ch->recv_ftx = CHAN_NOT_READY;
+    struct unbuf_chan ch;
+    ch.closed = false;
+    ch.datap = NULL;
+    mutex_init(&ch.send_mtx);
+    mutex_init(&ch.recv_mtx);
+    ch.send_ftx = CHAN_NOT_READY;
+    ch.recv_ftx = CHAN_NOT_READY;
+    return ch;
 }
 
 int buf_chan_trysend(struct buf_chan *ch, void *data) {
@@ -78,7 +80,7 @@ int buf_chan_trysend(struct buf_chan *ch, void *data) {
 }
 
 int buf_chan_send(struct buf_chan *ch, void *data) {
-    while (buf_chan_trysend(ch, ch->ring, data) == -1) {
+    while (buf_chan_trysend(ch, data) == -1) {
         if (errno != EAGAIN)
             return -1;
 
@@ -141,7 +143,7 @@ int buf_chan_tryrecv(struct buf_chan *ch, void **data) {
 }
 
 int buf_chan_recv(struct buf_chan *ch, void **data) {
-    while (chan_tryrecv_buf(ch, ch->ring, data) == -1) {
+    while (buf_chan_tryrecv(ch, data) == -1) {
         if (errno != EAGAIN)
             return -1;
 
