@@ -13,45 +13,37 @@ enum {
     CHAN_CLOSED = 3,
 };
 
-static void chan_init(struct chan *ch, size_t cap) {
+struct buf_chan *buf_chan_make(size_t cap, chan_allocator allocate) {
+    struct buf_chan *ch;
+
+    if (!allocate || !(ch = allocate(sizeof(*ch) + cap * sizeof(struct chan_item))))
+        return NULL;
+
     ch->closed = false;
-    ch->datap = NULL;
-
-    mutex_init(&ch->send_mtx);
-    mutex_init(&ch->recv_mtx);
-
-    if (cap == 0) {
-        ch->send_ftx = CHAN_NOT_READY;
-        ch->recv_ftx = CHAN_NOT_READY;
-    }
-    else {
-        ch->send_ftx = 0;
-        ch->recv_ftx = 0;
-    }
+    ch->send_ftx = 0;
+    ch->recv_ftx = 0;
     ch->send_waiters = 0;
     ch->recv_waiters = 0;
     ch->cap = cap;
     ch->head = (uint64_t)1 << 32;
     ch->tail = 0;
-    if (ch->cap > 0)
-        memset(ch->ring, 0, cap * sizeof(struct chan_item));
-}
+    memset(ch->ring, 0, cap * sizeof(struct chan_item));
 
-struct chan *chan_make(size_t cap, chan_alloc_fn alloc) {
-    struct chan *ch;
-    if (!alloc || !(ch = alloc(sizeof(*ch) + cap * sizeof(struct chan_item))))
-        return NULL;
-    chan_init(ch, cap);
     return ch;
 }
 
-struct chan chan_make_unbuf(void) {
-    struct chan ch;
-    chan_init(&ch, 0);
+struct unbuf_chan unbuf_chan_make(void) {
+    struct unbuf_chan ch;
+    ch.closed = false;
+    ch.datap = NULL;
+    mutex_init(&ch.send_mtx);
+    mutex_init(&ch.recv_mtx);
+    ch.send_ftx = CHAN_NOT_READY;
+    ch.recv_ftx = CHAN_NOT_READY;
     return ch;
 }
 
-static int chan_trysend_buf(struct chan *ch, void *data) {
+int buf_chan_trysend(struct buf_chan *ch, void *data) {
     if (atomic_load_explicit(&ch->closed, memory_order_relaxed)) {
         errno = EPIPE;
         return -1;
@@ -87,8 +79,8 @@ static int chan_trysend_buf(struct chan *ch, void *data) {
     return 0;
 }
 
-static int chan_send_buf(struct chan *ch, void *data) {
-    while (chan_trysend_buf(ch, data) == -1) {
+int buf_chan_send(struct buf_chan *ch, void *data) {
+    while (buf_chan_trysend(ch, data) == -1) {
         if (errno != EAGAIN)
             return -1;
 
@@ -114,7 +106,7 @@ static int chan_send_buf(struct chan *ch, void *data) {
     return 0;
 }
 
-static int chan_tryrecv_buf(struct chan *ch, void **data) {
+int buf_chan_tryrecv(struct buf_chan *ch, void **data) {
     if (atomic_load_explicit(&ch->closed, memory_order_relaxed)) {
         errno = EPIPE;
         return -1;
@@ -150,8 +142,8 @@ static int chan_tryrecv_buf(struct chan *ch, void **data) {
     return 0;
 }
 
-static int chan_recv_buf(struct chan *ch, void **data) {
-    while (chan_tryrecv_buf(ch, data) == -1) {
+int buf_chan_recv(struct buf_chan *ch, void **data) {
+    while (buf_chan_tryrecv(ch, data) == -1) {
         if (errno != EAGAIN)
             return -1;
 
@@ -177,7 +169,7 @@ static int chan_recv_buf(struct chan *ch, void **data) {
     return 0;
 }
 
-static int chan_send_unbuf(struct chan *ch, void *data) {
+int unbuf_chan_send(struct unbuf_chan *ch, void *data) {
     if (atomic_load_explicit(&ch->closed, memory_order_relaxed)) {
         errno = EPIPE;
         return -1;
@@ -219,7 +211,7 @@ static int chan_send_unbuf(struct chan *ch, void *data) {
     return 0;
 }
 
-static int chan_trysend_unbuf(struct chan *ch, void *data) {
+int unbuf_chan_trysend(struct unbuf_chan *ch, void *data) {
     if (atomic_load_explicit(&ch->closed, memory_order_relaxed)) {
         errno = EPIPE;
         return -1;
@@ -248,7 +240,7 @@ static int chan_trysend_unbuf(struct chan *ch, void *data) {
     return 0;
 }
 
-static int chan_recv_unbuf(struct chan *ch, void **data) {
+int unbuf_chan_recv(struct unbuf_chan *ch, void **data) {
     if (!data) {
         errno = EINVAL;
         return -1;
@@ -295,7 +287,7 @@ static int chan_recv_unbuf(struct chan *ch, void **data) {
     return 0;
 }
 
-static int chan_tryrecv_unbuf(struct chan *ch, void **data) {
+int unbuf_chan_tryrecv(struct unbuf_chan *ch, void **data) {
     if (!data) {
         errno = EINVAL;
         return -1;
@@ -329,36 +321,14 @@ static int chan_tryrecv_unbuf(struct chan *ch, void **data) {
     return 0;
 }
 
-void chan_close(struct chan *ch) {
+void unbuf_chan_close(struct unbuf_chan *ch) {
     ch->closed = true;
-    if (ch->cap == 0) {
-        atomic_store(&ch->recv_ftx, CHAN_CLOSED);
-        atomic_store(&ch->send_ftx, CHAN_CLOSED);
-    }
+    atomic_store(&ch->recv_ftx, CHAN_CLOSED);
+    atomic_store(&ch->send_ftx, CHAN_CLOSED);
+}
+
+void buf_chan_close(struct buf_chan *ch) {
+    ch->closed = true;
     futex_wake(&ch->recv_ftx, INT_MAX);
     futex_wake(&ch->send_ftx, INT_MAX);
-}
-
-int chan_send(struct chan *ch, void *data) {
-    return (ch->cap == 0)
-           ? chan_send_unbuf(ch, data)
-           : chan_send_buf(ch, data);
-}
-
-int chan_recv(struct chan *ch, void **data) {
-    return (ch->cap == 0)
-           ? chan_recv_unbuf(ch, data)
-           : chan_recv_buf(ch, data);
-}
-
-int chan_trysend(struct chan *ch, void *data) {
-    return (ch->cap == 0)
-           ? chan_trysend_unbuf(ch, data)
-           : chan_trysend_buf(ch, data);
-}
-
-int chan_tryrecv(struct chan *ch, void **data) {
-    return (ch->cap == 0)
-           ? chan_tryrecv_unbuf(ch, data)
-           : chan_tryrecv_buf(ch, data);
 }
